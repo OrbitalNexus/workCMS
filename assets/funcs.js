@@ -223,6 +223,67 @@ function addEmp() {
       })
     })};
 
+    function upRole() {
+      db.connect(
+        function (err) {
+          if (err) throw err;
+            db.query("SELECT * FROM employee", function (err, result) {
+              if (err) throw err;
+              console.table(result);
+            })
+    }),
+      inquirer
+        .prompt([
+          {
+            type: "input",
+            name: "selEmp",
+            message: "Enter employee ID number",
+          },
+        ])
+        .then((answers) => {
+          db.connect(
+            function (err) {
+              if (err) throw err;
+              if (answers.selEmp !== "" && !isNaN(answers.selEmp)) {
+                db.query("SELECT * FROM roles", function (err, result) {
+                  if (err) throw err;
+                  console.table(result);
+                });
+              } else {
+                console.log("invalid parameters!");
+                upRole();
+              }
+            },
+            inquirer
+              .prompt([
+                {
+                  type: "input",
+                  name: "role",
+                  message: "Enter new role ID number",
+                },
+              ])
+              .then((answer) => {
+                db.connect(function (err) {
+                  if (err) throw err;
+                  if (answer.role !== "" && !isNaN(answer.role)) {
+                    db.query(
+                      `UPDATE employee SET roleId = ? WHERE id = ?`, [answer.role, answers.selEmp],
+                      function (err, result) {
+                        if (err) throw err;
+                        console.log("Successfully updated");
+                        menu();
+                      }
+                    );
+                  } else {
+                    console.log("invalid parameters!");
+                    upRole();
+                  }
+                });
+              })
+          );
+        });
+    }
+
 
 function inqFunc() {
   inquirer
@@ -270,6 +331,10 @@ function inqFunc() {
 
       if (answers.menu == "add an employee") {
         addEmp();
+      }
+
+      if (answers.menu == "update an employee role") {
+        upRole();
       }
 
       if (answers.menu == "exit") {
