@@ -5,7 +5,9 @@ USE work_db;
 
 CREATE TABLE department 
 (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-names VARCHAR(30) NOT NULL);
+names VARCHAR(30) NOT NULL,
+constraint names check (names not like '%[^a-z]%')
+);
 
 CREATE TABLE roles
 (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

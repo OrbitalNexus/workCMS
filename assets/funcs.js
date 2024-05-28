@@ -26,7 +26,12 @@ function viewRoles() {
 function viewEmp() {
   db.connect(function (err) {
     if (err) throw err;
-    db.query("SELECT * FROM employee", function (err, result, fields) {
+    db.query(
+      `SELECT CONCAT(employee.first_name,' ', employee.last_name) AS name, roles.title AS role, roles.salary, department.names AS department, CONCAT(manager.first_name,' ', manager.last_name) AS manager 
+      FROM employee 
+      INNER JOIN roles ON employee.roleId = roles.id
+      INNER JOIN department ON roles.departmentId = department.id
+      LEFT JOIN employee manager ON employee.managerId = manager.id `, function (err, result, fields) {
       if (err) throw err;
       console.table(result);
       menu();
@@ -47,24 +52,24 @@ function addDep() {
       console.log(answers.menu);
       db.connect(function (err) {
         if (err) throw err;
-        const confirm = /[a-zA-Z]/;
-        const negCon = /([^0-9])/;
-        if (confirm.test(answers.menu) && negCon.test(answers.menu)) {
+        if (!isNaN(answers.menu)) {
           db.query(
-            `INSERT INTO department (names) VALUES ('${answers.menu}')`,
+            `INSERT INTO department (names) VALUES (?)`, answers.menu,
             function (err, result, fields) {
               if (err) throw err;
               console.log("Successfully added");
               menu();
-            }
-          );
-        } else {
-          console.log("must contain letters only");
-          addDep();
-        }
+        })
+      } else {
+        console.log('Can only contain letters')
+        addDep();
+      }
+     
+      })
+    
       });
-    });
-}
+};
+
 
 function addRole() {
   inquirer
