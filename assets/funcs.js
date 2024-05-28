@@ -1,4 +1,5 @@
 const inquirer = require("inquirer");
+require("dotenv").config();
 const { db } = require("./connection");
 
 function viewDep() {
@@ -31,11 +32,13 @@ function viewEmp() {
       FROM employee 
       INNER JOIN roles ON employee.roleId = roles.id
       INNER JOIN department ON roles.departmentId = department.id
-      LEFT JOIN employee manager ON employee.managerId = manager.id `, function (err, result, fields) {
-      if (err) throw err;
-      console.table(result);
-      menu();
-    });
+      LEFT JOIN employee manager ON employee.managerId = manager.id `,
+      function (err, result, fields) {
+        if (err) throw err;
+        console.table(result);
+        menu();
+      }
+    );
   });
 }
 
@@ -52,24 +55,27 @@ function addDep() {
       console.log(answers.menu);
       db.connect(function (err) {
         if (err) throw err;
-        if (!isNaN(answers.menu)) {
+        if (
+          answers.menu !== "" &&
+          typeof answers.menu == "string" &&
+          isNaN(answers.menu)
+        ) {
           db.query(
-            `INSERT INTO department (names) VALUES (?)`, answers.menu,
+            `INSERT INTO department (names) VALUES (?)`,
+            [answers.menu],
             function (err, result, fields) {
               if (err) throw err;
               console.log("Successfully added");
               menu();
-        })
-      } else {
-        console.log('Can only contain letters')
-        addDep();
-      }
-     
-      })
-    
+            }
+          );
+        } else {
+          console.log("Invalid parameters!");
+          addDep();
+        }
       });
-};
-
+    });
+}
 
 function addRole() {
   inquirer
@@ -89,10 +95,15 @@ function addRole() {
       db.connect(
         function (err) {
           if (err) throw err;
-          db.query("SELECT * FROM department", function (err, result) {
-            if (err) throw err;
-            console.table(result);
-          });
+          if (answers.role !== "" && !isNaN(answers.salary)) {
+            db.query("SELECT * FROM department", function (err, result) {
+              if (err) throw err;
+              console.table(result);
+            });
+          } else {
+            console.log("invalid parameters!");
+            addRole();
+          }
         },
         inquirer
           .prompt([
@@ -105,19 +116,113 @@ function addRole() {
           .then((answer) => {
             db.connect(function (err) {
               if (err) throw err;
-              db.query(
-                `INSERT INTO roles (title, salary, departmentId) VALUES ('${answers.role}','${answers.salary}', '${answer.dep}')`,
-                function (err, result) {
-                  if (err) throw err;
-                  console.log("Successfully added");
-                  menu();
-                }
-              );
+              if (!isNaN(answer.dep)) {
+                db.query(
+                  `INSERT INTO roles (title, salary, departmentId) VALUES (?, ?, ?)`,
+                  [answers.role, answers.salary, answer.dep],
+                  function (err, result) {
+                    if (err) throw err;
+                    console.log("Successfully added");
+                    menu();
+                  }
+                );
+              } else {
+                console.log("invalid parameters!");
+                addRole();
+              }
             });
           })
       );
     });
 }
+
+function addEmp() {
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "firstName",
+        message: "What is the first name of employee?",
+      },
+      {
+        type: "input",
+        name: "lastName",
+        message: "What is the last name of employee?",
+      },
+    ])
+    .then((answers) => {
+      db.connect(
+        function (err) {
+          if (err) throw err;
+          if (
+            answers.firstName !== "" &&
+            isNaN(answers.firstName) &&
+            answers.lastName !== "" &&
+            isNaN(answers.lastName)
+          ) {
+            db.query("SELECT * FROM roles", function (err, result) {
+              if (err) throw err;
+              console.table(result);
+            });
+          } else {
+            console.log("invalid parameters!");
+            addEmp();
+          }
+        }),
+        inquirer
+          .prompt([
+            {
+              type: "input",
+              name: "roleId",
+              message: "Enter role ID number",
+            },
+          ])
+          .then((answer) => {
+            db.connect(function (err) {
+              if (err) throw err;
+              if (!isNaN(answer.roleId)) {
+                db.query(
+                  `SELECT * FROM employee`,
+                  function (err, result) {
+                    if (err) throw err;
+                    console.table(result);
+                  }
+                );
+              } else {
+                console.log("invalid parameters!");
+                addEmp();
+              }
+            }),
+        inquirer
+          .prompt([
+            {
+              type: "input",
+              name: "manager",
+              message: "Enter an employee ID",
+            },
+          ])
+          .then((answ) => {
+            db.connect(function (err) {
+              if (err) throw err;
+              if (!isNaN(answ.manager)) {
+                db.query(
+                  `INSERT INTO employee (first_name, last_name, roleId, managerId) VALUES (?, ?, ?, ?)`,
+                  [answers.firstName, answers.lastName, answer.roleId, answ.manager],
+                  function (err, result) {
+                    if (err) throw err;
+                    console.log("Successfully added");
+                    menu();
+                  }
+                );
+              } else {
+                console.log("invalid parameters!");
+                addEmp();
+              }
+            });
+          })
+      })
+    })};
+
 
 function inqFunc() {
   inquirer
@@ -161,6 +266,10 @@ function inqFunc() {
 
       if (answers.menu == "add a role") {
         addRole();
+      }
+
+      if (answers.menu == "add an employee") {
+        addEmp();
       }
 
       if (answers.menu == "exit") {
